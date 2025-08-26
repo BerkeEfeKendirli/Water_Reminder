@@ -6,12 +6,12 @@ val onboardingItems =
     listOf(
         OnboardingItem(
             imageRes = R.drawable.onboarding1,
-            title = "Welcome to ",
+            title = "Welcome to",
             appName = "HydrateMe",
         ),
-        OnboardingItem(imageRes = R.drawable.onboarding2, title = "Set your Hydration Goals"),
+        OnboardingItem(imageRes = R.drawable.onboarding2, title = "Set your\n Hydration Goals"),
         OnboardingItem(
             imageRes = R.drawable.onboarding3,
-            title = "Get Reminders and Tips on Hydration & Health",
+            title = "Get Reminders and Tips on\n Hydration & Health",
         ),
     )
