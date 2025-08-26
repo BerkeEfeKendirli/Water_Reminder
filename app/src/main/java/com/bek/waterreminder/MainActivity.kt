@@ -6,14 +6,18 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.bek.waterreminder.ui.screens.onboarding.OnboardingScreen
-import com.bek.waterreminder.ui.theme.WaterReminderTheme
+import androidx.compose.ui.graphics.Color
+import androidx.navigation.compose.rememberNavController
+import com.bek.waterreminder.navigation.AppNavHost
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContent {
-      WaterReminderTheme { Surface(modifier = Modifier.fillMaxSize()) { OnboardingScreen() } }
+      val navController = rememberNavController()
+      Surface(modifier = Modifier.fillMaxSize(), color = Color.White) {
+        AppNavHost(navController = navController)
+      }
     }
   }
 }
