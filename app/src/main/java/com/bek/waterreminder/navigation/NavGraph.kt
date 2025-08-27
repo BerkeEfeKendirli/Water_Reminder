@@ -6,15 +6,17 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.bek.waterreminder.ui.screens.calculation.CalculationScreen
-import com.bek.waterreminder.ui.screens.home.HomeScreen
 import com.bek.waterreminder.ui.screens.onboarding.OnboardingScreen
 import com.bek.waterreminder.viewmodel.CalculationViewModel
 
 @Composable
-fun AppNavHost(navController: NavHostController) {
+fun AppNavHost(navController: NavHostController, userHasSetWeight: Boolean) {
   val calculationViewModel: CalculationViewModel = viewModel()
 
-  NavHost(navController = navController, startDestination = Screens.Onboarding.route) {
+  NavHost(
+      navController = navController,
+      startDestination = if (userHasSetWeight) Screens.Home.route else Screens.Onboarding.route,
+  ) {
     composable(Screens.Onboarding.route) {
       OnboardingScreen(onFinished = { navController.navigate(Screens.Calculation.route) })
     }
@@ -24,6 +26,6 @@ fun AppNavHost(navController: NavHostController) {
           onNavigateToHome = { navController.navigate(Screens.Home.route) },
       )
     }
-    composable(Screens.Home.route) { HomeScreen(viewModel = calculationViewModel) }
+    composable(Screens.Home.route) { HomeNavigation() }
   }
 }
