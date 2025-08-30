@@ -26,24 +26,26 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bek.waterreminder.R
 import com.bek.waterreminder.data.local.dataStore
 import com.bek.waterreminder.ui.theme.Gilroy
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import com.bek.waterreminder.viewmodel.ManageWaterViewModel
+import com.bek.waterreminder.viewmodel.ManageWaterViewModelFactory
 
 @Composable
 fun WaterIntakeCard(percent: Float) {
-  val dailyWaterKey = intPreferencesKey("daily_water")
   val context = LocalContext.current
   val dataStore = context.dataStore
+  val viewModel: ManageWaterViewModel =
+      viewModel(
+          factory = ManageWaterViewModelFactory(dataStore),
+      )
 
-  val dailyWaterFlow: Flow<Int> =
-      dataStore.data.map { preferences -> preferences[dailyWaterKey] ?: 0 }
-  val dailyWater by dailyWaterFlow.collectAsState(0)
+  val dailyGoal by viewModel.dailyGoalFlow.collectAsState(0)
 
   Box(
       modifier =
@@ -87,13 +89,20 @@ fun WaterIntakeCard(percent: Float) {
             modifier =
                 Modifier.fillMaxHeight()
                     .fillMaxWidth(percent)
-                    .clip(shape = RoundedCornerShape(4.dp))
+                    .clip(
+                        shape =
+                            RoundedCornerShape(
+                                topStart = 4.dp,
+                                bottomStart = 4.dp,
+                                topEnd = if (percent >= 1f) 4.dp else 16.dp,
+                                bottomEnd = if (percent >= 1f) 4.dp else 16.dp,
+                            )
+                    )
                     .background(
                         brush =
                             Brush.linearGradient(
                                 colors =
                                     listOf(
-                                        Color(0xffb6f6ff),
                                         Color(0xff37c8ff),
                                         Color(0xff0196fa),
                                         Color(0xff0074e1),
@@ -105,13 +114,14 @@ fun WaterIntakeCard(percent: Float) {
         ) {
           if (percent > 0.1) {
             Text(
-                "${(dailyWater * percent).toInt()}ml",
+                "${(dailyGoal * percent).toInt()}ml",
                 style =
                     TextStyle(
                         fontFamily = Gilroy,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                         color = Color.White,
+                        textAlign = TextAlign.Center,
                     ),
             )
           }
@@ -121,11 +131,11 @@ fun WaterIntakeCard(percent: Float) {
       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text("0ml", style = progressTextStyle.copy(color = colorResource(R.color.primary_red)))
         Text(
-            "${dailyWater/2}ml",
+            "${dailyGoal/2}ml",
             style = progressTextStyle.copy(color = colorResource(R.color.primary_blue)),
         )
         Text(
-            "${dailyWater}ml",
+            "${dailyGoal}ml",
             style = progressTextStyle.copy(color = colorResource(R.color.primary_green)),
         )
       }

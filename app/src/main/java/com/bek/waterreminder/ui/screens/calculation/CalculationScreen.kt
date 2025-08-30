@@ -47,7 +47,7 @@ fun CalculationScreen(viewModel: CalculationViewModel, onNavigateToHome: () -> U
   var intPart by remember { mutableStateOf(70) }
   var decimalPart by remember { mutableStateOf(0) }
   val weight = intPart + decimalPart / 10f
-  val dailyWater = (weight * 35).roundToInt()
+  val dailyGoal = (weight * 35).roundToInt()
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
 
@@ -62,7 +62,7 @@ fun CalculationScreen(viewModel: CalculationViewModel, onNavigateToHome: () -> U
             append("You need to drink ")
           }
           withStyle(style = SpanStyle(color = colorResource(R.color.primary_blue))) {
-            append("$dailyWater" + "mL ")
+            append("$dailyGoal" + "mL ")
           }
           withStyle(style = SpanStyle(color = colorResource(R.color.primary_black))) {
             append("water daily.")
@@ -117,7 +117,7 @@ fun CalculationScreen(viewModel: CalculationViewModel, onNavigateToHome: () -> U
           scope.launch {
             context.dataStore.edit { prefs ->
               prefs[floatPreferencesKey("user_weight")] = weight
-              prefs[intPreferencesKey("daily_water")] = dailyWater
+              prefs[intPreferencesKey("daily_goal")] = dailyGoal
               prefs[booleanPreferencesKey("has_set_weight")] = true
             }
           }
