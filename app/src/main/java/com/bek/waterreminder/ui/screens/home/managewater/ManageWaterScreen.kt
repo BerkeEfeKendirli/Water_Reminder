@@ -22,6 +22,7 @@ import com.bek.waterreminder.ui.components.CustomButton
 import com.bek.waterreminder.ui.screens.home.managewater.components.StreakCard
 import com.bek.waterreminder.ui.screens.home.managewater.components.TimeGreetingCard
 import com.bek.waterreminder.ui.screens.home.managewater.components.WaterIntakeCard
+import com.bek.waterreminder.ui.screens.home.managewater.components.WaterQuantityCard
 import com.bek.waterreminder.viewmodel.ManageWaterViewModel
 import com.bek.waterreminder.viewmodel.ManageWaterViewModelFactory
 import kotlinx.coroutines.launch
@@ -39,6 +40,7 @@ fun ManageWaterScreen() {
   val dailyWater by viewModel.dailyWaterFlow.collectAsState(0)
   val percentage = if (dailyGoal > 0) dailyWater.toFloat() / dailyGoal.toFloat() else 0f
   val streakCount by viewModel.streakFlow.collectAsState(0)
+  val selectedCup by viewModel.selectedCupFlow.collectAsState(200)
 
   Column(
       modifier =
@@ -52,10 +54,12 @@ fun ManageWaterScreen() {
     WaterIntakeCard(percent = percentage)
     Spacer(modifier = Modifier.height(8.dp))
     StreakCard(hasStreak = streakCount > 0, streakCount = streakCount)
+    Spacer(modifier = Modifier.height(8.dp))
+    WaterQuantityCard()
     Spacer(modifier = Modifier.weight(1f))
     CustomButton(
-        onClick = { coroutineScope.launch { viewModel.drinkWater(amount = 200) } },
-        text = "+ Drink Water",
+        onClick = { coroutineScope.launch { viewModel.drinkWater(amount = selectedCup) } },
+        text = "+ Drink Water (${selectedCup}ml)",
         modifier = Modifier.fillMaxWidth(),
     )
   }

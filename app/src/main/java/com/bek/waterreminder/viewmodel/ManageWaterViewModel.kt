@@ -15,6 +15,11 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
   private val _streakKey = intPreferencesKey("streak_count")
   private val _lastCompletedDateKey = intPreferencesKey("last_completed_date")
 
+  private val _selectedCupKey = intPreferencesKey("selected_cup")
+
+  val selectedCupFlow: Flow<Int> =
+      _dataStore.data.map { preferences -> preferences[_selectedCupKey] ?: 200 }
+
   val dailyWaterFlow: Flow<Int> =
       _dataStore.data.map { preferences ->
         val todayKey = getWaterKeyForToday()
@@ -34,6 +39,10 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
 
   suspend fun updateStreak(newStreak: Int) {
     _dataStore.edit { preferences -> preferences[_streakKey] = newStreak }
+  }
+
+  suspend fun updateSelectedCup(newCup: Int) {
+    _dataStore.edit { preferences -> preferences[_selectedCupKey] = newCup }
   }
 
   suspend fun updateLastCompletedDate(newDate: Int) {
