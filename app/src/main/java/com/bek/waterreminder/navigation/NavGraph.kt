@@ -3,14 +3,12 @@ package com.bek.waterreminder.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.bek.waterreminder.ui.screens.LoadingScreen
 import com.bek.waterreminder.ui.screens.calculation.CalculationScreen
 import com.bek.waterreminder.ui.screens.onboarding.OnboardingScreen
-import com.bek.waterreminder.viewmodel.CalculationViewModel
 import com.bek.waterreminder.viewmodel.NavigationViewModel
 
 @Composable
@@ -27,9 +25,7 @@ fun AppNavHost(
           OnboardingScreen(onFinished = { navController.navigate(Screens.Calculation.route) })
         }
         composable(Screens.Calculation.route) {
-          val calculationViewModel: CalculationViewModel = viewModel()
           CalculationScreen(
-              viewModel = calculationViewModel,
               onNavigateToHome = { navController.navigate(Screens.Home.route) },
           )
         }

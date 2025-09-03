@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -37,15 +37,13 @@ import com.bek.waterreminder.data.local.dataStore
 import com.bek.waterreminder.ui.components.CustomButton
 import com.bek.waterreminder.ui.screens.calculation.components.WeightSlider
 import com.bek.waterreminder.ui.theme.Gilroy
-import com.bek.waterreminder.viewmodel.CalculationViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
-fun CalculationScreen(viewModel: CalculationViewModel, onNavigateToHome: () -> Unit) {
-  val viewModel = viewModel
-  var intPart by remember { mutableStateOf(70) }
-  var decimalPart by remember { mutableStateOf(0) }
+fun CalculationScreen(onNavigateToHome: () -> Unit) {
+  var intPart by remember { mutableIntStateOf(70) }
+  var decimalPart by remember { mutableIntStateOf(0) }
   val weight = intPart + decimalPart / 10f
   val dailyGoal = (weight * 35).roundToInt()
   val context = LocalContext.current
