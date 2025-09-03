@@ -2,7 +2,6 @@ package com.bek.waterreminder.ui.screens.home.managewater.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,24 +53,20 @@ fun WaterIntakeCard(percent: Float) {
               .background(Color.White, shape = RoundedCornerShape(8.dp))
               .border(1.dp, color = Color(0xffdee8f5), shape = RoundedCornerShape(8.dp))
   ) {
-    Column(modifier = Modifier.padding(16.dp)) {
-      Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically,
-      ) {
-        Text(
-            "Your daily water intake",
-            style =
-                TextStyle(
-                    fontFamily = Gilroy,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 14.sp,
-                    color = colorResource(R.color.primary_black),
-                ),
-        )
-        ChangeButton({})
-      }
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+    ) {
+      Text(
+          "Your daily water intake",
+          style =
+              TextStyle(
+                  fontFamily = Gilroy,
+                  fontWeight = FontWeight.Medium,
+                  fontSize = 14.sp,
+                  color = colorResource(R.color.primary_black),
+              ),
+      )
       Spacer(modifier = Modifier.height(8.dp))
       Box(
           modifier =
@@ -114,7 +109,7 @@ fun WaterIntakeCard(percent: Float) {
         ) {
           if (percent > 0.1) {
             Text(
-                "${(dailyGoal * percent).toInt()}ml",
+                "${(dailyGoal * percent).toInt()}ml\n(${(percent*100).toInt()}%)",
                 style =
                     TextStyle(
                         fontFamily = Gilroy,
@@ -149,27 +144,3 @@ val progressTextStyle =
         fontWeight = FontWeight.Medium,
         fontSize = 10.sp,
     )
-
-@Composable
-fun ChangeButton(onClick: () -> Unit) {
-  Box(
-      modifier =
-          Modifier.height(24.dp)
-              .clip(RoundedCornerShape(8.35.dp))
-              .background(color = Color(0xffe4f2fc), shape = RoundedCornerShape(8.35.dp))
-              .clickable { onClick() },
-      contentAlignment = Alignment.Center,
-  ) {
-    Text(
-        "Change",
-        modifier = Modifier.padding(horizontal = 11.dp),
-        style =
-            TextStyle(
-                fontFamily = Gilroy,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 12.sp,
-                color = colorResource(R.color.primary_blue),
-            ),
-    )
-  }
-}
