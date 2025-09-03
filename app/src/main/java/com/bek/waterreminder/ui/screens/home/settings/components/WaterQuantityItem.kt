@@ -1,4 +1,4 @@
-package com.bek.waterreminder.ui.screens.home.managewater.components
+package com.bek.waterreminder.ui.screens.home.settings.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

@@ -1,5 +1,6 @@
-package com.bek.waterreminder.ui.screens.home.managewater.components
+package com.bek.waterreminder.ui.screens.home.settings.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,6 +51,7 @@ fun WaterQuantityCard() {
       modifier =
           Modifier.clip(shape = RoundedCornerShape(8.dp))
               .border(1.dp, color = Color(0xffdee8f5), shape = RoundedCornerShape(8.dp))
+              .background(Color.White, shape = RoundedCornerShape(8.dp))
   ) {
     Column(modifier = Modifier.padding(16.dp)) {
       Text(
