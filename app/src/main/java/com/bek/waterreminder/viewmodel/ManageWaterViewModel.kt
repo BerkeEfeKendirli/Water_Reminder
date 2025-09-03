@@ -3,6 +3,7 @@ package com.bek.waterreminder.viewmodel
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.Flow
@@ -15,6 +16,8 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
   private val _streakKey = intPreferencesKey("streak_count")
   private val _lastCompletedDateKey = intPreferencesKey("last_completed_date")
 
+  private val _weightKey = floatPreferencesKey("user_weight")
+
   private val _selectedCupKey = intPreferencesKey("selected_cup")
 
   val selectedCupFlow: Flow<Int> =
@@ -25,6 +28,8 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
         val todayKey = getWaterKeyForToday()
         preferences[todayKey] ?: 0
       }
+
+  val weightFlow: Flow<Float> = _dataStore.data.map { preferences -> preferences[_weightKey] ?: 0f }
 
   val dailyGoalFlow: Flow<Int> =
       _dataStore.data.map { preferences -> preferences[_dailyGoalKey] ?: 2000 }
