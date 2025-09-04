@@ -5,17 +5,22 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
+import com.bek.waterreminder.data.model.managewater.WaterEntry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : ViewModel() {
   private val _dailyGoalKey = intPreferencesKey("daily_goal")
   private val _streakKey = intPreferencesKey("streak_count")
   private val _lastCompletedDateKey = intPreferencesKey("last_completed_date")
-
   private val _weightKey = floatPreferencesKey("user_weight")
 
   private val _selectedCupKey = intPreferencesKey("selected_cup")
@@ -35,8 +40,54 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
       _dataStore.data.map { preferences -> preferences[_dailyGoalKey] ?: 2000 }
 
   val streakFlow: Flow<Int> = _dataStore.data.map { preferences -> preferences[_streakKey] ?: 0 }
-  val lastCompletedDateFlow: Flow<Int> =
-      _dataStore.data.map { preferences -> preferences[_lastCompletedDateKey] ?: 0 }
+
+  val todayWaterEntriesFlow: Flow<List<WaterEntry>> =
+      _dataStore.data.map { preferences ->
+        val key = getWaterEntriesKeyForToday()
+        val json = preferences[key] ?: "[]"
+        Json.decodeFromString<List<WaterEntry>>(json)
+      }
+
+  suspend fun addWaterEntryToday(amount: Int) {
+    val key = getWaterEntriesKeyForToday()
+    val currentTime = LocalTime.now()
+    val formatter = DateTimeFormatter.ofPattern("hh:mma")
+    val formattedTime = currentTime.format(formatter)
+    val entry = WaterEntry(amount, formattedTime)
+
+    val currentJson = _dataStore.data.first()[key] ?: "[]"
+    val currentList = Json.decodeFromString<List<WaterEntry>>(currentJson)
+    val newList = currentList + entry
+    val newJson = Json.encodeToString(newList)
+    _dataStore.edit { it[key] = newJson }
+    drinkWater(amount)
+  }
+
+  suspend fun removeWaterEntryToday(index: Int) {
+    val key = getWaterEntriesKeyForToday()
+    val currentJson = _dataStore.data.first()[key] ?: "[]"
+    val currentList = Json.decodeFromString<List<WaterEntry>>(currentJson)
+    if (index in currentList.indices) {
+      val removedEntry = currentList[index]
+      val newList = currentList.toMutableList().apply { removeAt(index) }
+      val newJson = Json.encodeToString(newList)
+      _dataStore.edit { it[key] = newJson }
+      decreaseWater(removedEntry.amount)
+    }
+  }
+
+  suspend fun checkAndUpdateStreak() {
+    val today = LocalDate.now()
+    val yesterday = today.minusDays(1)
+    val yesterdayInt = yesterday.year * 10000 + yesterday.monthValue * 100 + yesterday.dayOfMonth
+    val dailyGoal = _dataStore.data.first()[_dailyGoalKey] ?: 2000
+    val yesterdayWaterKey = intPreferencesKey("water_$yesterdayInt")
+    val yesterdayWater = _dataStore.data.first()[yesterdayWaterKey] ?: 0
+
+    if (yesterdayWater < dailyGoal) {
+      updateStreak(0)
+    }
+  }
 
   suspend fun updateDailyGoal(newGoal: Int) {
     _dataStore.edit { preferences -> preferences[_dailyGoalKey] = newGoal }
@@ -59,6 +110,11 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
     return intPreferencesKey("water_$today")
   }
 
+  fun getWaterEntriesKeyForToday(): Preferences.Key<String> {
+    val today = getTodayAsInt()
+    return stringPreferencesKey("water_entries_$today")
+  }
+
   suspend fun drinkWater(amount: Int) {
     val waterKey = getWaterKeyForToday()
     val currentWater = _dataStore.data.first()[waterKey] ?: 0
@@ -75,13 +131,11 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
     }
   }
 
-  suspend fun getAllDailyWaterData(): Map<Int, Int> {
-    val prefs = _dataStore.data.first()
-    return prefs
-        .asMap()
-        .filterKeys { it.name.startsWith("water_") }
-        .mapKeys { it.key.name.removePrefix("water_").toInt() }
-        .mapValues { it.value as Int }
+  suspend fun decreaseWater(amount: Int) {
+    val waterKey = getWaterKeyForToday()
+    val currentWater = _dataStore.data.first()[waterKey] ?: 0
+    val newWater = (currentWater - amount).coerceAtLeast(0)
+    _dataStore.edit { preferences -> preferences[waterKey] = newWater }
   }
 
   fun getTodayAsInt(): Int {
