@@ -22,7 +22,6 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
   private val _streakKey = intPreferencesKey("streak_count")
   private val _lastCompletedDateKey = intPreferencesKey("last_completed_date")
   private val _weightKey = floatPreferencesKey("user_weight")
-
   private val _selectedCupKey = intPreferencesKey("selected_cup")
 
   val selectedCupFlow: Flow<Int> =
@@ -125,6 +124,7 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
     val todayDateInt = getTodayAsInt()
     val lastDate = _dataStore.data.first()[_lastCompletedDateKey] ?: 0
     val streak = _dataStore.data.first()[_streakKey] ?: 0
+
     if (newWater >= dailyGoal && lastDate != todayDateInt) {
       updateStreak(streak + 1)
       updateLastCompletedDate(todayDateInt)
@@ -134,8 +134,18 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
   suspend fun decreaseWater(amount: Int) {
     val waterKey = getWaterKeyForToday()
     val currentWater = _dataStore.data.first()[waterKey] ?: 0
+    val dailyGoal = _dataStore.data.first()[_dailyGoalKey] ?: 2000
     val newWater = (currentWater - amount).coerceAtLeast(0)
     _dataStore.edit { preferences -> preferences[waterKey] = newWater }
+
+    val todayDateInt = getTodayAsInt()
+    val lastDate = _dataStore.data.first()[_lastCompletedDateKey] ?: 0
+    val streak = _dataStore.data.first()[_streakKey] ?: 0
+
+    if (newWater < dailyGoal && lastDate == todayDateInt && streak > 0) {
+      updateStreak(streak - 1)
+      updateLastCompletedDate(0)
+    }
   }
 
   fun getTodayAsInt(): Int {
