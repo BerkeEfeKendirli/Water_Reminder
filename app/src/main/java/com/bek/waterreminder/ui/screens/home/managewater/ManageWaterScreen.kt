@@ -8,7 +8,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -23,6 +26,7 @@ import com.bek.waterreminder.ui.components.CustomButton
 import com.bek.waterreminder.ui.screens.home.managewater.components.StreakCard
 import com.bek.waterreminder.ui.screens.home.managewater.components.TimeGreetingCard
 import com.bek.waterreminder.ui.screens.home.managewater.components.WaterIntakeCard
+import com.bek.waterreminder.ui.screens.home.managewater.components.WaterItem
 import com.bek.waterreminder.viewmodel.ManageWaterViewModel
 import com.bek.waterreminder.viewmodel.ManageWaterViewModelFactory
 import kotlinx.coroutines.launch
@@ -41,6 +45,9 @@ fun ManageWaterScreen() {
   val percentage = if (dailyGoal > 0) dailyWater.toFloat() / dailyGoal.toFloat() else 0f
   val streakCount by viewModel.streakFlow.collectAsState(0)
   val selectedCup by viewModel.selectedCupFlow.collectAsState(200)
+  val todayWaterEntries by viewModel.todayWaterEntriesFlow.collectAsState(emptyList())
+
+  LaunchedEffect(Unit) { coroutineScope.launch { viewModel.checkAndUpdateStreak() } }
 
   Column(
       modifier =
@@ -54,10 +61,20 @@ fun ManageWaterScreen() {
     WaterIntakeCard(percent = percentage)
     Spacer(modifier = Modifier.height(8.dp))
     StreakCard(hasStreak = streakCount > 0, streakCount = streakCount)
-    Spacer(modifier = Modifier.weight(1f))
+    Spacer(modifier = Modifier.height(8.dp))
+    LazyColumn(modifier = Modifier.weight(1f)) {
+      itemsIndexed(todayWaterEntries) { index, entry ->
+        WaterItem(
+            qty = entry.amount,
+            time = entry.time,
+            onDelete = { coroutineScope.launch { viewModel.removeWaterEntryToday(index) } },
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+      }
+    }
     CustomButton(
         onClick = {
-          coroutineScope.launch { viewModel.drinkWater(amount = selectedCup) }
+          coroutineScope.launch { viewModel.addWaterEntryToday(selectedCup) }
           Toast.makeText(context, "Added ${selectedCup}ml of water", Toast.LENGTH_SHORT).show()
         },
         text = "+ Drink Water (${selectedCup}ml)",
