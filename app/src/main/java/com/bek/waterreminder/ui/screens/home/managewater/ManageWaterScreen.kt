@@ -63,11 +63,15 @@ fun ManageWaterScreen() {
     StreakCard(hasStreak = streakCount > 0, streakCount = streakCount)
     Spacer(modifier = Modifier.height(8.dp))
     LazyColumn(modifier = Modifier.weight(1f)) {
-      itemsIndexed(todayWaterEntries) { index, entry ->
+      itemsIndexed(todayWaterEntries.reversed()) { index, entry ->
         WaterItem(
             qty = entry.amount,
             time = entry.time,
-            onDelete = { coroutineScope.launch { viewModel.removeWaterEntryToday(index) } },
+            onDelete = {
+              coroutineScope.launch {
+                viewModel.removeWaterEntryToday(todayWaterEntries.size - 1 - index)
+              }
+            },
         )
         Spacer(modifier = Modifier.height(8.dp))
       }
