@@ -3,6 +3,7 @@ package com.bek.waterreminder.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -15,6 +16,7 @@ import com.bek.waterreminder.viewmodel.NavigationViewModel
 fun AppNavHost(
     navController: NavHostController,
     navigationViewModel: NavigationViewModel,
+    modifier: Modifier,
 ) {
   val hasSetWeight by navigationViewModel.hasSetWeight.collectAsState()
   when (hasSetWeight) {
