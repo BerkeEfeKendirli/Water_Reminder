@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,10 +45,14 @@ import com.bek.waterreminder.data.local.dataStore
 import com.bek.waterreminder.ui.components.CustomButton
 import com.bek.waterreminder.ui.screens.calculation.components.WeightSlider
 import com.bek.waterreminder.ui.screens.home.settings.components.SettingsButton
+import com.bek.waterreminder.ui.screens.home.settings.components.TimePickerDropdown
 import com.bek.waterreminder.ui.screens.home.settings.components.WaterQuantityCard
 import com.bek.waterreminder.ui.theme.Gilroy
+import com.bek.waterreminder.util.updateNotificationWorker
 import com.bek.waterreminder.viewmodel.ManageWaterViewModel
 import com.bek.waterreminder.viewmodel.ManageWaterViewModelFactory
+import com.bek.waterreminder.viewmodel.SettingsViewModel
+import com.bek.waterreminder.viewmodel.SettingsViewModelFactory
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,13 +64,33 @@ fun SettingsScreen() {
       viewModel(
           factory = ManageWaterViewModelFactory(dataStore),
       )
+  val settingsViewModel: SettingsViewModel =
+      viewModel(factory = SettingsViewModelFactory(dataStore))
   val coroutineScope = rememberCoroutineScope()
   val sheetState = rememberModalBottomSheetState()
-  var showSheet by remember { mutableStateOf(false) }
+  var showGoalSheet by remember { mutableStateOf(false) }
+  var showTimerSheet by remember { mutableStateOf(false) }
   var lPart by remember { mutableIntStateOf(2) }
   var mlPart by remember { mutableIntStateOf(500) }
   val updatedGoal = lPart.times(1000) + mlPart
   val userWeight by viewModel.weightFlow.collectAsState(0f)
+
+  val sleepStartHour by settingsViewModel.sleepStartHour.collectAsState(initial = 23)
+  val sleepStartMinute by settingsViewModel.sleepStartMinute.collectAsState(initial = 0)
+  val sleepEndHour by settingsViewModel.sleepEndHour.collectAsState(initial = 7)
+  val sleepEndMinute by settingsViewModel.sleepEndMinute.collectAsState(initial = 0)
+  val notificationIntervalMinutes by
+      settingsViewModel.notificationIntervalMinutes.collectAsState(initial = 60L)
+
+  val notificationHour = (notificationIntervalMinutes / 60).toInt()
+  val notificationMinute = (notificationIntervalMinutes % 60).toInt()
+
+  var sleepStartHourLocal by remember { mutableIntStateOf(sleepStartHour) }
+  var sleepStartMinuteLocal by remember { mutableIntStateOf(sleepStartMinute) }
+  var sleepEndHourLocal by remember { mutableIntStateOf(sleepEndHour) }
+  var sleepEndMinuteLocal by remember { mutableIntStateOf(sleepEndMinute) }
+  var notificationHourLocal by remember { mutableIntStateOf(notificationHour) }
+  var notificationMinuteLocal by remember { mutableIntStateOf(notificationMinute) }
 
   Column(
       modifier = Modifier.fillMaxSize().background(color = Color(0xfff8f8ff)).padding(16.dp),
@@ -75,12 +100,12 @@ fun SettingsScreen() {
     SettingsButton(
         text = "Set your daily water intake goal",
         icon = R.drawable.baseline_arrow_forward_ios_24,
-        onClick = { showSheet = true },
+        onClick = { showGoalSheet = true },
     )
     SettingsButton(
         text = "Set sleep/notification timer",
         icon = R.drawable.baseline_arrow_forward_ios_24,
-        onClick = {},
+        onClick = { showTimerSheet = true },
     )
     WaterQuantityCard()
     SettingsButton(
@@ -97,8 +122,8 @@ fun SettingsScreen() {
     )
   }
 
-  if (showSheet) {
-    ModalBottomSheet(onDismissRequest = { showSheet = false }, sheetState = sheetState) {
+  if (showGoalSheet) {
+    ModalBottomSheet(onDismissRequest = { showGoalSheet = false }, sheetState = sheetState) {
       Column(modifier = Modifier.height(350.dp), verticalArrangement = Arrangement.SpaceBetween) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -118,7 +143,7 @@ fun SettingsScreen() {
           Image(
               painter = painterResource(R.drawable.close_circle),
               contentDescription = "Close",
-              modifier = Modifier.clickable { showSheet = false },
+              modifier = Modifier.clickable { showGoalSheet = false },
           )
         }
         HorizontalDivider(thickness = 1.dp, color = Color(0xffd9cffb))
@@ -163,7 +188,7 @@ fun SettingsScreen() {
               text = "Save Daily Goal",
               onClick = {
                 coroutineScope.launch { viewModel.updateDailyGoal(updatedGoal) }
-                showSheet = false
+                showGoalSheet = false
                 Toast.makeText(context, "Goal Saved", Toast.LENGTH_SHORT).show()
               },
               modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -174,13 +199,128 @@ fun SettingsScreen() {
               onClick = {
                 val dailyGoal = userWeight * 35
                 coroutineScope.launch { viewModel.updateDailyGoal(dailyGoal.toInt()) }
-                showSheet = false
+                showGoalSheet = false
                 Toast.makeText(context, "Goal Reset To Default", Toast.LENGTH_SHORT).show()
               },
               modifier =
                   Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
           )
         }
+      }
+    }
+  }
+
+  //
+  if (showTimerSheet) {
+    ModalBottomSheet(onDismissRequest = { showTimerSheet = false }, sheetState = sheetState) {
+      Column(modifier = Modifier.height(350.dp), verticalArrangement = Arrangement.SpaceBetween) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Text(
+              "Set Sleep/Notification Timer",
+              style =
+                  TextStyle(
+                      fontFamily = Gilroy,
+                      fontWeight = FontWeight.SemiBold,
+                      fontSize = 16.sp,
+                      color = Color(0xff413B89),
+                  ),
+          )
+          Image(
+              painter = painterResource(R.drawable.close_circle),
+              contentDescription = "Close",
+              modifier = Modifier.clickable { showTimerSheet = false },
+          )
+        }
+        HorizontalDivider(thickness = 1.dp, color = Color(0xffd9cffb))
+        Column(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+          Box(contentAlignment = Alignment.Center, modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+              Column(
+                  modifier = Modifier.weight(1f),
+                  horizontalAlignment = Alignment.Start,
+                  verticalArrangement = Arrangement.spacedBy(8.dp),
+              ) {
+                Text(
+                    "Set Sleep Timer",
+                    style =
+                        TextStyle(
+                            fontFamily = Gilroy,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = colorResource(R.color.primary_black),
+                        ),
+                )
+                TimePickerDropdown(
+                    label = "Start:",
+                    hour = sleepStartHourLocal,
+                    minute = sleepStartMinuteLocal,
+                    onHourChange = { sleepStartHourLocal = it },
+                    onMinuteChange = { sleepStartMinuteLocal = it },
+                )
+                TimePickerDropdown(
+                    label = "End:  ",
+                    hour = sleepEndHourLocal,
+                    minute = sleepEndMinuteLocal,
+                    onHourChange = { sleepEndHourLocal = it },
+                    onMinuteChange = { sleepEndMinuteLocal = it },
+                )
+              }
+              Column(
+                  modifier = Modifier.weight(1f),
+                  horizontalAlignment = Alignment.Start,
+                  verticalArrangement = Arrangement.spacedBy(8.dp),
+              ) {
+                Text(
+                    "Set Notification Timer",
+                    style =
+                        TextStyle(
+                            fontFamily = Gilroy,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = colorResource(R.color.primary_black),
+                        ),
+                )
+                TimePickerDropdown(
+                    label = "Interval:",
+                    hour = notificationHourLocal,
+                    minute = notificationMinuteLocal,
+                    onHourChange = { notificationHourLocal = it },
+                    onMinuteChange = { notificationMinuteLocal = it },
+                )
+              }
+            }
+          }
+        }
+        CustomButton(
+            text = "Set Sleep/Notification Timer",
+            onClick = {
+              coroutineScope.launch {
+                settingsViewModel.setSleepStart(sleepStartHourLocal, sleepStartMinuteLocal)
+                settingsViewModel.setSleepEnd(sleepEndHourLocal, sleepEndMinuteLocal)
+                settingsViewModel.setNotificationInterval(
+                    notificationHourLocal,
+                    notificationMinuteLocal,
+                )
+                updateNotificationWorker(
+                    context,
+                    (notificationHourLocal * 60 + notificationMinuteLocal).toLong(),
+                )
+              }
+              showTimerSheet = false
+              Toast.makeText(context, "Timer Set", Toast.LENGTH_SHORT).show()
+            },
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+        )
       }
     }
   }
