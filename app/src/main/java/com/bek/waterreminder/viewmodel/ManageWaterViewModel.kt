@@ -47,6 +47,20 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
         Json.decodeFromString<List<WaterEntry>>(json)
       }
 
+  val weeklyWaterFlow: Flow<List<Int>> =
+      _dataStore.data.map { preferences ->
+        val days =
+            (0..6).map { offset ->
+              val date = LocalDate.now().minusDays((6 - offset).toLong())
+              val key =
+                  intPreferencesKey(
+                      "water_${date.year * 10000 + date.monthValue*100+ date.dayOfMonth}"
+                  )
+              preferences[key] ?: 0
+            }
+        days
+      }
+
   suspend fun addWaterEntryToday(amount: Int) {
     val key = getWaterEntriesKeyForToday()
     val currentTime = LocalTime.now()
