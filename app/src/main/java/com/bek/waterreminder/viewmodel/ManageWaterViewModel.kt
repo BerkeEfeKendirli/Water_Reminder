@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bek.waterreminder.data.model.managewater.WaterEntry
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -46,6 +47,11 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
       _dataStore.data.map { preferences -> preferences[_dailyGoalKey] ?: 2000 }
 
   val streakFlow: Flow<Int> = _dataStore.data.map { preferences -> preferences[_streakKey] ?: 0 }
+
+  val dailyPercentFlow =
+      combine(dailyWaterFlow, dailyGoalFlow) { water, goal ->
+        if (goal > 0) water.toFloat() / goal.toFloat() else 0f
+      }
 
   val todayWaterEntriesFlow: Flow<List<WaterEntry>> =
       _dataStore.data.map { preferences ->
@@ -99,19 +105,19 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
     val yesterday = today.minusDays(1)
 
     val todayWater = prefs[getWaterKeyForToday()] ?: 0
+    val streak = prefs[_streakKey] ?: 0
 
     if (lastDateInt != 0) {
       val lastCompletedDate =
           LocalDate.of(lastDateInt / 10000, (lastDateInt % 10000) / 100, lastDateInt % 100)
-      if (lastCompletedDate != yesterday) {
+
+      if (lastCompletedDate.isBefore(yesterday)) {
         updateStreak(0)
-        updateLastCompletedDate(0)
       }
     }
 
     val lastDateAfterReset = _dataStore.data.first()[_lastCompletedDateKey] ?: 0
     if (todayWater >= dailyGoal && lastDateAfterReset != getTodayAsInt()) {
-      val streak = prefs[_streakKey] ?: 0
       updateStreak(streak + 1)
       updateLastCompletedDate(getTodayAsInt())
     }
