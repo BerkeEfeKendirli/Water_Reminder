@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -46,8 +45,6 @@ fun ManageWaterScreen() {
   val streakCount by viewModel.streakFlow.collectAsState(0)
   val selectedCup by viewModel.selectedCupFlow.collectAsState(200)
   val todayWaterEntries by viewModel.todayWaterEntriesFlow.collectAsState(emptyList())
-
-  LaunchedEffect(Unit) { coroutineScope.launch { viewModel.checkAndUpdateStreak() } }
 
   Column(
       modifier =
