@@ -39,9 +39,7 @@ fun ManageWaterScreen() {
           factory = ManageWaterViewModelFactory(dataStore),
       )
   val coroutineScope = rememberCoroutineScope()
-  val dailyGoal by viewModel.dailyGoalFlow.collectAsState(0)
-  val dailyWater by viewModel.dailyWaterFlow.collectAsState(0)
-  val percentage = if (dailyGoal > 0) dailyWater.toFloat() / dailyGoal.toFloat() else 0f
+  val percentage by viewModel.dailyPercentFlow.collectAsState(0f)
   val streakCount by viewModel.streakFlow.collectAsState(0)
   val selectedCup by viewModel.selectedCupFlow.collectAsState(200)
   val todayWaterEntries by viewModel.todayWaterEntriesFlow.collectAsState(emptyList())

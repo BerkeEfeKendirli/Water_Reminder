@@ -45,6 +45,7 @@ fun WaterIntakeCard(percent: Float) {
       )
 
   val dailyGoal by viewModel.dailyGoalFlow.collectAsState(0)
+  val dailyWater by viewModel.dailyWaterFlow.collectAsState(0)
 
   Box(
       modifier =
@@ -109,7 +110,7 @@ fun WaterIntakeCard(percent: Float) {
         ) {
           if (percent > 0.1) {
             Text(
-                "${(dailyGoal * percent).toInt()}ml\n(${(percent*100).toInt()}%)",
+                "${dailyWater}ml\n(${(percent*100).toInt()}%)",
                 style =
                     TextStyle(
                         fontFamily = Gilroy,
