@@ -119,9 +119,6 @@ fun SettingsScreen() {
           context.startActivity(intent)
         },
     )
-    Text(
-        "$sleepStartHour, $sleepStartMinute, $sleepEndHour, $sleepEndMinute, $notificationIntervalMinutes as"
-    )
   }
 
   if (showGoalSheet) {
