@@ -1,6 +1,5 @@
 package com.bek.waterreminder
 
-import WaterReminderWorker
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -23,17 +22,14 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
 import com.bek.waterreminder.navigation.AppNavHost
+import com.bek.waterreminder.util.updateNotificationWorker
 import com.bek.waterreminder.viewmodel.NavigationViewModel
 import com.bek.waterreminder.viewmodel.NavigationViewModelFactory
 import dataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
-import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,19 +63,7 @@ class MainActivity : ComponentActivity() {
     val intervalKey = longPreferencesKey("notification_interval_minutes")
     val prefs = applicationContext.dataStore
     val intervalMinutes = runBlocking { prefs.data.map { it[intervalKey] ?: 60L }.first() }
-    val safeInterval = maxOf(intervalMinutes, 15L)
-    val workRequest =
-        PeriodicWorkRequestBuilder<WaterReminderWorker>(
-                repeatInterval = safeInterval,
-                repeatIntervalTimeUnit = TimeUnit.MINUTES,
-            )
-            .build()
-    WorkManager.getInstance(applicationContext)
-        .enqueueUniquePeriodicWork(
-            "water_reminder_work",
-            ExistingPeriodicWorkPolicy.UPDATE,
-            workRequest,
-        )
+    updateNotificationWorker(applicationContext, intervalMinutes)
 
     setContent {
       val context = LocalContext.current
@@ -87,7 +71,7 @@ class MainActivity : ComponentActivity() {
       val navigationViewModel: NavigationViewModel =
           viewModel(factory = NavigationViewModelFactory(context))
       Scaffold(
-          modifier = Modifier.fillMaxSize().safeDrawingPadding(), // Safe area
+          modifier = Modifier.fillMaxSize().safeDrawingPadding(),
       ) { innerPadding ->
         AppNavHost(
             navController = navController,

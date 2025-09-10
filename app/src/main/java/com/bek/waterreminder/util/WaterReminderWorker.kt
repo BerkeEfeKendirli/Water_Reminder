@@ -32,11 +32,16 @@ class WaterReminderWorker(context: Context, workerParams: WorkerParameters) :
     val now = LocalTime.now()
     val sleepStart = LocalTime.of(sleepStartHour, sleepStartMinute)
     val sleepEnd = LocalTime.of(sleepEndHour, sleepEndMinute)
+
     val isSleepTime =
-        if (sleepEnd > sleepStart) {
-          now.isAfter(sleepStart) && now.isBefore(sleepEnd)
-        } else {
-          now.isAfter(sleepStart) || now.isBefore(sleepEnd)
+        when {
+          sleepStart.isBefore(sleepEnd) -> {
+            now.isAfter(sleepStart) && now.isBefore(sleepEnd)
+          }
+          sleepStart.isAfter(sleepEnd) -> {
+            now.isAfter(sleepStart) || now.isBefore(sleepEnd)
+          }
+          else -> false
         }
 
     if (isSleepTime) {

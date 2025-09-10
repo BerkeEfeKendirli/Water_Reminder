@@ -48,7 +48,6 @@ import com.bek.waterreminder.ui.screens.home.settings.components.SettingsButton
 import com.bek.waterreminder.ui.screens.home.settings.components.TimePickerDropdown
 import com.bek.waterreminder.ui.screens.home.settings.components.WaterQuantityCard
 import com.bek.waterreminder.ui.theme.Gilroy
-import com.bek.waterreminder.util.updateNotificationWorker
 import com.bek.waterreminder.viewmodel.ManageWaterViewModel
 import com.bek.waterreminder.viewmodel.ManageWaterViewModelFactory
 import com.bek.waterreminder.viewmodel.SettingsViewModel
@@ -119,6 +118,9 @@ fun SettingsScreen() {
               )
           context.startActivity(intent)
         },
+    )
+    Text(
+        "$sleepStartHour, $sleepStartMinute, $sleepEndHour, $sleepEndMinute, $notificationIntervalMinutes as"
     )
   }
 
@@ -311,10 +313,8 @@ fun SettingsScreen() {
                     notificationHourLocal,
                     notificationMinuteLocal,
                 )
-                updateNotificationWorker(
-                    context,
-                    (notificationHourLocal * 60 + notificationMinuteLocal).toLong(),
-                )
+
+                settingsViewModel.updateWorker(context)
               }
               showTimerSheet = false
               Toast.makeText(context, "Timer Set", Toast.LENGTH_SHORT).show()

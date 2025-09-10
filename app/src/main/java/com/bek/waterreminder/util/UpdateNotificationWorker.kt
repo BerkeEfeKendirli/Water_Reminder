@@ -8,9 +8,14 @@ import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 
 fun updateNotificationWorker(context: Context, intervalMinutes: Long) {
-  val safeInterval = maxOf(intervalMinutes, 15)
+  val safeInterval = maxOf(intervalMinutes, 15L)
   val workRequest =
-      PeriodicWorkRequestBuilder<WaterReminderWorker>(safeInterval, TimeUnit.MINUTES).build()
+      PeriodicWorkRequestBuilder<WaterReminderWorker>(
+              repeatInterval = safeInterval,
+              repeatIntervalTimeUnit = TimeUnit.MINUTES,
+          )
+          .build()
+
   WorkManager.getInstance(context)
       .enqueueUniquePeriodicWork(
           "water_reminder_work",

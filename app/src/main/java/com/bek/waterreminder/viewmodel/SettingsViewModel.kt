@@ -1,12 +1,15 @@
 package com.bek.waterreminder.viewmodel
 
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.lifecycle.ViewModel
+import com.bek.waterreminder.util.updateNotificationWorker
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 class SettingsViewModel(private val dataStore: DataStore<Preferences>) : ViewModel() {
@@ -47,5 +50,10 @@ class SettingsViewModel(private val dataStore: DataStore<Preferences>) : ViewMod
   suspend fun setNotificationInterval(hour: Int, minute: Int) {
     val value = hour * 60L + minute
     dataStore.edit { it[_notificationIntervalKey] = value }
+  }
+
+  suspend fun updateWorker(context: Context) {
+    val intervalMinutes = notificationIntervalMinutes.first()
+    updateNotificationWorker(context, intervalMinutes)
   }
 }
