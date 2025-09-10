@@ -69,6 +69,18 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
         }
       }
 
+  val weeklyAverageFlow: Flow<Float> =
+      weeklyWaterFlow.map { weeklyList ->
+        if (weeklyList.isEmpty()) 0f else weeklyList.average().toFloat()
+      }
+
+  val weeklyCompletionRateFlow: Flow<Float> =
+      weeklyWaterFlow.combine(dailyGoalFlow) { weeklyList, goal ->
+        if (goal == 0 || weeklyList.isEmpty()) return@combine 0f
+        val completedDays = weeklyList.count { it >= goal }
+        completedDays / 7f
+      }
+
   suspend fun addWaterEntryToday(amount: Int) {
     val key = getWaterEntriesKeyForToday()
     val currentTime = LocalTime.now()
