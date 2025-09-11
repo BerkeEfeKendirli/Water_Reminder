@@ -114,10 +114,6 @@ fun HomeNavigation() {
                         color = colorResource(R.color.primary_black),
                     ),
             )
-            Image(
-                painter = painterResource(R.drawable.bell),
-                contentDescription = "Notifications",
-            )
           }
         }
       },

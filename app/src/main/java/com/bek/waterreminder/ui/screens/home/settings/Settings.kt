@@ -48,6 +48,7 @@ import com.bek.waterreminder.ui.screens.home.settings.components.SettingsButton
 import com.bek.waterreminder.ui.screens.home.settings.components.TimePickerDropdown
 import com.bek.waterreminder.ui.screens.home.settings.components.WaterQuantityCard
 import com.bek.waterreminder.ui.theme.Gilroy
+import com.bek.waterreminder.util.NotificationPermissionHelper
 import com.bek.waterreminder.viewmodel.ManageWaterViewModel
 import com.bek.waterreminder.viewmodel.ManageWaterViewModelFactory
 import com.bek.waterreminder.viewmodel.SettingsViewModel
@@ -91,6 +92,20 @@ fun SettingsScreen() {
   var notificationHourLocal by remember { mutableIntStateOf(notificationHour) }
   var notificationMinuteLocal by remember { mutableIntStateOf(notificationMinute) }
 
+  fun checkNotificationPermissionAndProceed(onPermissionGranted: () -> Unit) {
+    if (NotificationPermissionHelper.hasNotificationPermission(context)) {
+      onPermissionGranted()
+    } else {
+      Toast.makeText(
+              context,
+              "Notification permission required. Please enable notifications in app settings.",
+              Toast.LENGTH_LONG,
+          )
+          .show()
+      NotificationPermissionHelper.openAppSettings(context)
+    }
+  }
+
   Column(
       modifier = Modifier.fillMaxSize().background(color = Color(0xfff8f8ff)).padding(16.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
@@ -104,7 +119,7 @@ fun SettingsScreen() {
     SettingsButton(
         text = "Set sleep/notification timer",
         icon = R.drawable.baseline_arrow_forward_ios_24,
-        onClick = { showTimerSheet = true },
+        onClick = { checkNotificationPermissionAndProceed { showTimerSheet = true } },
     )
     WaterQuantityCard()
     SettingsButton(
@@ -209,7 +224,6 @@ fun SettingsScreen() {
     }
   }
 
-  //
   if (showTimerSheet) {
     ModalBottomSheet(onDismissRequest = { showTimerSheet = false }, sheetState = sheetState) {
       Column(modifier = Modifier.height(350.dp), verticalArrangement = Arrangement.SpaceBetween) {
@@ -303,18 +317,20 @@ fun SettingsScreen() {
         CustomButton(
             text = "Set Sleep/Notification Timer",
             onClick = {
-              coroutineScope.launch {
-                settingsViewModel.setSleepStart(sleepStartHourLocal, sleepStartMinuteLocal)
-                settingsViewModel.setSleepEnd(sleepEndHourLocal, sleepEndMinuteLocal)
-                settingsViewModel.setNotificationInterval(
-                    notificationHourLocal,
-                    notificationMinuteLocal,
-                )
+              checkNotificationPermissionAndProceed {
+                coroutineScope.launch {
+                  settingsViewModel.setSleepStart(sleepStartHourLocal, sleepStartMinuteLocal)
+                  settingsViewModel.setSleepEnd(sleepEndHourLocal, sleepEndMinuteLocal)
+                  settingsViewModel.setNotificationInterval(
+                      notificationHourLocal,
+                      notificationMinuteLocal,
+                  )
 
-                settingsViewModel.updateWorker(context)
+                  settingsViewModel.updateWorker(context)
+                }
+                showTimerSheet = false
+                Toast.makeText(context, "Timer Set", Toast.LENGTH_SHORT).show()
               }
-              showTimerSheet = false
-              Toast.makeText(context, "Timer Set", Toast.LENGTH_SHORT).show()
             },
             modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
         )
