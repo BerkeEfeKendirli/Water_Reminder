@@ -19,6 +19,7 @@ import kotlinx.serialization.json.Json
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : ViewModel() {
 
@@ -29,7 +30,10 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
   private val _selectedCupKey = intPreferencesKey("selected_cup")
 
   init {
-    viewModelScope.launch { restoreStreak() }
+    viewModelScope.launch {
+      restoreStreak()
+      migrateExistingEntries()
+    }
   }
 
   val selectedCupFlow: Flow<Int> =
@@ -57,7 +61,11 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
       _dataStore.data.map { preferences ->
         val key = getWaterEntriesKeyForToday()
         val json = preferences[key] ?: "[]"
-        Json.decodeFromString<List<WaterEntry>>(json)
+        try {
+          Json.decodeFromString<List<WaterEntry>>(json)
+        } catch (e: Exception) {
+          emptyList()
+        }
       }
 
   val weeklyWaterFlow: Flow<List<Int>> =
@@ -81,6 +89,19 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
         completedDays / 7f
       }
 
+  suspend fun removeWaterEntryById(id: String) {
+    val key = getWaterEntriesKeyForToday()
+    val currentJson = _dataStore.data.first()[key] ?: "[]"
+    val currentList = Json.decodeFromString<List<WaterEntry>>(currentJson)
+
+    val entryToRemove = currentList.find { it.id == id }
+    if (entryToRemove != null) {
+      val newList = currentList.filter { it.id != id }
+      _dataStore.edit { it[key] = Json.encodeToString(newList) }
+      decreaseWater(entryToRemove.amount)
+    }
+  }
+
   suspend fun addWaterEntryToday(amount: Int) {
     val key = getWaterEntriesKeyForToday()
     val currentTime = LocalTime.now()
@@ -89,7 +110,10 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
 
     val currentJson = _dataStore.data.first()[key] ?: "[]"
     val currentList = Json.decodeFromString<List<WaterEntry>>(currentJson)
-    val newList = currentList + WaterEntry(amount, formattedTime)
+
+    val newEntry =
+        WaterEntry(id = UUID.randomUUID().toString(), amount = amount, time = formattedTime)
+    val newList = currentList + newEntry
 
     _dataStore.edit { it[key] = Json.encodeToString(newList) }
     drinkWater(amount)
@@ -106,6 +130,38 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
 
       _dataStore.edit { it[key] = Json.encodeToString(newList) }
       decreaseWater(removedEntry.amount)
+    }
+  }
+
+  private suspend fun migrateExistingEntries() {
+    val key = getWaterEntriesKeyForToday()
+    val currentJson = _dataStore.data.first()[key] ?: "[]"
+
+    try {
+      val currentList = Json.decodeFromString<List<WaterEntry>>(currentJson)
+      val needsMigration =
+          currentList.any {
+            try {
+
+              it.id.isEmpty()
+            } catch (e: Exception) {
+              true
+            }
+          }
+
+      if (needsMigration) {
+        val migratedList =
+            currentList.map { entry ->
+              if (entry.id.isEmpty()) {
+                entry.copy(id = UUID.randomUUID().toString())
+              } else {
+                entry
+              }
+            }
+        _dataStore.edit { it[key] = Json.encodeToString(migratedList) }
+      }
+    } catch (e: Exception) {
+      _dataStore.edit { it[key] = "[]" }
     }
   }
 

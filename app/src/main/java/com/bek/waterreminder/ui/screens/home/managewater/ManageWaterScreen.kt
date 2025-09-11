@@ -22,10 +22,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bek.waterreminder.data.local.dataStore
 import com.bek.waterreminder.ui.components.CustomButton
+import com.bek.waterreminder.ui.screens.home.managewater.components.AnimatedWaterItem
 import com.bek.waterreminder.ui.screens.home.managewater.components.StreakCard
 import com.bek.waterreminder.ui.screens.home.managewater.components.TimeGreetingCard
 import com.bek.waterreminder.ui.screens.home.managewater.components.WaterIntakeCard
-import com.bek.waterreminder.ui.screens.home.managewater.components.WaterItem
 import com.bek.waterreminder.viewmodel.ManageWaterViewModel
 import com.bek.waterreminder.viewmodel.ManageWaterViewModelFactory
 import kotlinx.coroutines.launch
@@ -58,19 +58,19 @@ fun ManageWaterScreen() {
     StreakCard(hasStreak = streakCount > 0, streakCount = streakCount)
     Spacer(modifier = Modifier.height(8.dp))
     LazyColumn(modifier = Modifier.weight(1f)) {
-      itemsIndexed(todayWaterEntries.reversed()) { index, entry ->
-        WaterItem(
+      itemsIndexed(
+          items = todayWaterEntries.reversed(),
+          key = { _, entry -> entry.id },
+      ) { _, entry ->
+        AnimatedWaterItem(
             qty = entry.amount,
             time = entry.time,
-            onDelete = {
-              coroutineScope.launch {
-                viewModel.removeWaterEntryToday(todayWaterEntries.size - 1 - index)
-              }
-            },
+            onDelete = { coroutineScope.launch { viewModel.removeWaterEntryById(entry.id) } },
         )
         Spacer(modifier = Modifier.height(8.dp))
       }
     }
+
     CustomButton(
         onClick = {
           coroutineScope.launch { viewModel.addWaterEntryToday(selectedCup) }

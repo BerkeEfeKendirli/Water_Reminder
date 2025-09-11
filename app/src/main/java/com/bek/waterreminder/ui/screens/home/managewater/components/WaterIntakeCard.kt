@@ -1,5 +1,7 @@
 package com.bek.waterreminder.ui.screens.home.managewater.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -47,6 +49,9 @@ fun WaterIntakeCard(percent: Float) {
   val dailyGoal by viewModel.dailyGoalFlow.collectAsState(0)
   val dailyWater by viewModel.dailyWaterFlow.collectAsState(0)
 
+  val animatedPercent by
+      animateFloatAsState(targetValue = percent, animationSpec = tween(durationMillis = 700))
+
   Box(
       modifier =
           Modifier.fillMaxWidth()
@@ -84,14 +89,14 @@ fun WaterIntakeCard(percent: Float) {
         Box(
             modifier =
                 Modifier.fillMaxHeight()
-                    .fillMaxWidth(percent)
+                    .fillMaxWidth(animatedPercent)
                     .clip(
                         shape =
                             RoundedCornerShape(
                                 topStart = 4.dp,
                                 bottomStart = 4.dp,
-                                topEnd = if (percent >= 1f) 4.dp else 16.dp,
-                                bottomEnd = if (percent >= 1f) 4.dp else 16.dp,
+                                topEnd = if (animatedPercent >= 1f) 4.dp else 16.dp,
+                                bottomEnd = if (animatedPercent >= 1f) 4.dp else 16.dp,
                             )
                     )
                     .background(
@@ -108,9 +113,9 @@ fun WaterIntakeCard(percent: Float) {
                     ),
             contentAlignment = Alignment.Center,
         ) {
-          if (percent > 0.1) {
+          if (animatedPercent > 0.1) {
             Text(
-                "${dailyWater}ml\n(${(percent*100).toInt()}%)",
+                "${dailyWater}ml\n(${(animatedPercent*100).toInt()}%)",
                 style =
                     TextStyle(
                         fontFamily = Gilroy,
