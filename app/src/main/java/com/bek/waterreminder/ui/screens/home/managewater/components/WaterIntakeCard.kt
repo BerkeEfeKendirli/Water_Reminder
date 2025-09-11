@@ -95,8 +95,8 @@ fun WaterIntakeCard(percent: Float) {
                             RoundedCornerShape(
                                 topStart = 4.dp,
                                 bottomStart = 4.dp,
-                                topEnd = if (animatedPercent >= 1f) 4.dp else 16.dp,
-                                bottomEnd = if (animatedPercent >= 1f) 4.dp else 16.dp,
+                                topEnd = if (animatedPercent >= 1f) 4.dp else 200.dp,
+                                bottomEnd = if (animatedPercent >= 1f) 4.dp else 200.dp,
                             )
                     )
                     .background(
