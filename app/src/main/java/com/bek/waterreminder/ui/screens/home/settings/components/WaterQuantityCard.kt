@@ -21,29 +21,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bek.waterreminder.R
-import com.bek.waterreminder.data.local.dataStore
 import com.bek.waterreminder.ui.theme.Gilroy
 import com.bek.waterreminder.viewmodel.ManageWaterViewModel
-import com.bek.waterreminder.viewmodel.ManageWaterViewModelFactory
 import kotlinx.coroutines.launch
 
 @Composable
-fun WaterQuantityCard() {
-  val context = LocalContext.current
-  val dataStore = context.dataStore
-  val viewModel: ManageWaterViewModel =
-      viewModel(
-          factory = ManageWaterViewModelFactory(dataStore),
-      )
-
+fun WaterQuantityCard(viewModel: ManageWaterViewModel) {
   val selectedCup by viewModel.selectedCupFlow.collectAsState(200)
   val coroutineScope = rememberCoroutineScope()
 

@@ -19,30 +19,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.bek.waterreminder.data.local.dataStore
 import com.bek.waterreminder.ui.components.CustomButton
 import com.bek.waterreminder.ui.screens.home.managewater.components.AnimatedWaterItem
+import com.bek.waterreminder.ui.screens.home.managewater.components.CalendarDialog
 import com.bek.waterreminder.ui.screens.home.managewater.components.StreakCard
 import com.bek.waterreminder.ui.screens.home.managewater.components.TimeGreetingCard
 import com.bek.waterreminder.ui.screens.home.managewater.components.WaterIntakeCard
 import com.bek.waterreminder.viewmodel.ManageWaterViewModel
-import com.bek.waterreminder.viewmodel.ManageWaterViewModelFactory
 import kotlinx.coroutines.launch
 
 @Composable
-fun ManageWaterScreen() {
+fun ManageWaterScreen(
+    showCalendar: Boolean,
+    onCloseCalendar: () -> Unit,
+    viewModel: ManageWaterViewModel,
+) {
   val context = LocalContext.current
-  val dataStore = context.dataStore
-  val viewModel: ManageWaterViewModel =
-      viewModel(
-          factory = ManageWaterViewModelFactory(dataStore),
-      )
   val coroutineScope = rememberCoroutineScope()
-  val percentage by viewModel.dailyPercentFlow.collectAsState(0f)
+  val percentage by viewModel.selectedDayPercentFlow.collectAsState(0f)
   val streakCount by viewModel.streakFlow.collectAsState(0)
   val selectedCup by viewModel.selectedCupFlow.collectAsState(200)
-  val todayWaterEntries by viewModel.todayWaterEntriesFlow.collectAsState(emptyList())
+  val todayWaterEntries by viewModel.selectedDayWaterEntriesFlow.collectAsState(emptyList())
 
   Column(
       modifier =
@@ -53,7 +50,7 @@ fun ManageWaterScreen() {
   ) {
     TimeGreetingCard()
     Spacer(modifier = Modifier.height(8.dp))
-    WaterIntakeCard(percent = percentage)
+    WaterIntakeCard(percent = percentage, viewModel = viewModel)
     Spacer(modifier = Modifier.height(8.dp))
     StreakCard(hasStreak = streakCount > 0, streakCount = streakCount)
     Spacer(modifier = Modifier.height(8.dp))
@@ -73,11 +70,16 @@ fun ManageWaterScreen() {
 
     CustomButton(
         onClick = {
-          coroutineScope.launch { viewModel.addWaterEntryToday(selectedCup) }
+          coroutineScope.launch { viewModel.addWaterEntry(selectedCup) }
           Toast.makeText(context, "Added ${selectedCup}ml of water", Toast.LENGTH_SHORT).show()
         },
         text = "+ Drink Water (${selectedCup}ml)",
         modifier = Modifier.fillMaxWidth(),
     )
   }
+  CalendarDialog(
+      show = showCalendar,
+      onClose = onCloseCalendar,
+      onDateSelected = { date -> viewModel.setSelectedDate(date) },
+  )
 }

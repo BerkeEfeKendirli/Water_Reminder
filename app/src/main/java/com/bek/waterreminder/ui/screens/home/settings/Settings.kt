@@ -50,28 +50,30 @@ import com.bek.waterreminder.ui.screens.home.settings.components.WaterQuantityCa
 import com.bek.waterreminder.ui.theme.Gilroy
 import com.bek.waterreminder.util.NotificationPermissionHelper
 import com.bek.waterreminder.viewmodel.ManageWaterViewModel
-import com.bek.waterreminder.viewmodel.ManageWaterViewModelFactory
 import com.bek.waterreminder.viewmodel.SettingsViewModel
 import com.bek.waterreminder.viewmodel.SettingsViewModelFactory
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(viewModel: ManageWaterViewModel) {
   val context = LocalContext.current
   val dataStore = context.dataStore
-  val viewModel: ManageWaterViewModel =
-      viewModel(
-          factory = ManageWaterViewModelFactory(dataStore),
-      )
   val settingsViewModel: SettingsViewModel =
       viewModel(factory = SettingsViewModelFactory(dataStore))
   val coroutineScope = rememberCoroutineScope()
   val sheetState = rememberModalBottomSheetState()
   var showGoalSheet by remember { mutableStateOf(false) }
+  var showWeightSheet by remember { mutableStateOf(false) }
   var showTimerSheet by remember { mutableStateOf(false) }
   var lPart by remember { mutableIntStateOf(2) }
   var mlPart by remember { mutableIntStateOf(500) }
+  var intPart by remember { mutableIntStateOf(70) }
+  var decimalPart by remember { mutableIntStateOf(0) }
+  val weight = intPart + decimalPart / 10f
+  val weightDailyGoal = (weight * 35).roundToInt()
+
   val updatedGoal = lPart.times(1000) + mlPart
   val userWeight by viewModel.weightFlow.collectAsState(0f)
 
@@ -121,7 +123,12 @@ fun SettingsScreen() {
         icon = R.drawable.baseline_arrow_forward_ios_24,
         onClick = { checkNotificationPermissionAndProceed { showTimerSheet = true } },
     )
-    WaterQuantityCard()
+    SettingsButton(
+        text = "Set weight",
+        icon = R.drawable.baseline_arrow_forward_ios_24,
+        onClick = { showWeightSheet = true },
+    )
+    WaterQuantityCard(viewModel = viewModel)
     SettingsButton(
         text = "Visit source code",
         icon = R.drawable.github_mark,
@@ -220,6 +227,80 @@ fun SettingsScreen() {
                   Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
           )
         }
+      }
+    }
+  }
+
+  if (showWeightSheet) {
+    ModalBottomSheet(onDismissRequest = { showWeightSheet = false }, sheetState = sheetState) {
+      Column(modifier = Modifier.height(350.dp), verticalArrangement = Arrangement.SpaceBetween) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Text(
+              "Set Weight",
+              style =
+                  TextStyle(
+                      fontFamily = Gilroy,
+                      fontWeight = FontWeight.SemiBold,
+                      fontSize = 16.sp,
+                      color = Color(0xff413B89),
+                  ),
+          )
+          Image(
+              painter = painterResource(R.drawable.close_circle),
+              contentDescription = "Close",
+              modifier = Modifier.clickable { showWeightSheet = false },
+          )
+        }
+        HorizontalDivider(thickness = 1.dp, color = Color(0xffd9cffb))
+        Column(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+          Row(modifier = Modifier.padding(16.dp)) {
+            WeightSlider(
+                value = intPart,
+                onValueChange = { intPart = it },
+                valueRange = 40..150,
+                steps = 110,
+            )
+            Spacer(modifier = Modifier.width(24.dp))
+            WeightSlider(
+                value = decimalPart,
+                onValueChange = { decimalPart = it },
+                valueRange = 0..9,
+                steps = 9,
+            )
+          }
+          Spacer(modifier = Modifier.height(16.dp))
+          Text(
+              "${weight}KG - ${weightDailyGoal}ml",
+              style =
+                  TextStyle(
+                      fontFamily = Gilroy,
+                      fontWeight = FontWeight.SemiBold,
+                      fontSize = 36.sp,
+                      color = colorResource(R.color.primary_blue),
+                  ),
+          )
+        }
+
+        CustomButton(
+            text = "Recalculate Daily Goal",
+            onClick = {
+              coroutineScope.launch {
+                viewModel.updateWeight(weight)
+                viewModel.updateDailyGoal(weightDailyGoal)
+              }
+              showWeightSheet = false
+              Toast.makeText(context, "Goal Saved", Toast.LENGTH_SHORT).show()
+            },
+            modifier = Modifier.fillMaxWidth().padding(all = 16.dp),
+        )
       }
     }
   }

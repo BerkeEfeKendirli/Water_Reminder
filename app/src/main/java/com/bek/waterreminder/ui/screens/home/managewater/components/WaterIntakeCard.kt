@@ -30,24 +30,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bek.waterreminder.R
-import com.bek.waterreminder.data.local.dataStore
 import com.bek.waterreminder.ui.theme.Gilroy
 import com.bek.waterreminder.viewmodel.ManageWaterViewModel
-import com.bek.waterreminder.viewmodel.ManageWaterViewModelFactory
 
 @Composable
-fun WaterIntakeCard(percent: Float) {
+fun WaterIntakeCard(percent: Float, viewModel: ManageWaterViewModel) {
   val context = LocalContext.current
-  val dataStore = context.dataStore
-  val viewModel: ManageWaterViewModel =
-      viewModel(
-          factory = ManageWaterViewModelFactory(dataStore),
-      )
-
   val dailyGoal by viewModel.dailyGoalFlow.collectAsState(0)
-  val dailyWater by viewModel.dailyWaterFlow.collectAsState(0)
+  val dailyWater by viewModel.selectedDayWaterFlow.collectAsState(0)
 
   val animatedPercent by
       animateFloatAsState(targetValue = percent, animationSpec = tween(durationMillis = 700))
