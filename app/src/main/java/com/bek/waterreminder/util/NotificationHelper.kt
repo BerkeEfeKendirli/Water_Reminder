@@ -25,7 +25,7 @@ object NotificationHelper {
         NotificationCompat.Builder(context, "water_reminder_channel")
             .setContentTitle(title)
             .setContentText(message)
-            .setSmallIcon(R.drawable.camel)
+            .setSmallIcon(R.drawable.foreground)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .build()
