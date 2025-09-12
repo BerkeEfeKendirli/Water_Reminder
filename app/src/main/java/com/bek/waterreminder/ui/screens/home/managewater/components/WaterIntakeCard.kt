@@ -23,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -36,7 +35,6 @@ import com.bek.waterreminder.viewmodel.ManageWaterViewModel
 
 @Composable
 fun WaterIntakeCard(percent: Float, viewModel: ManageWaterViewModel) {
-  val context = LocalContext.current
   val dailyGoal by viewModel.dailyGoalFlow.collectAsState(0)
   val dailyWater by viewModel.selectedDayWaterFlow.collectAsState(0)
 

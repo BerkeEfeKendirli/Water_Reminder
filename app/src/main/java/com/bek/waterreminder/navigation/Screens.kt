@@ -4,8 +4,6 @@ import com.bek.waterreminder.R
 
 sealed class Screens(val route: String) {
 
-  object Loading : Screens("loading")
-
   object Onboarding : Screens("onboarding")
 
   object Calculation : Screens("calculation")

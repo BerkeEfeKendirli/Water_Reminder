@@ -1,6 +1,5 @@
 package com.bek.waterreminder.util
 
-import WaterReminderWorker
 import android.content.Context
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder

@@ -23,10 +23,10 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.bek.waterreminder.navigation.AppNavHost
+import com.bek.waterreminder.util.dataStore
 import com.bek.waterreminder.util.updateNotificationWorker
 import com.bek.waterreminder.viewmodel.NavigationViewModel
 import com.bek.waterreminder.viewmodel.NavigationViewModelFactory
-import dataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
