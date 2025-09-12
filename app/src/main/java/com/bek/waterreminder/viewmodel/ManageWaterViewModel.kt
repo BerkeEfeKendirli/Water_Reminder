@@ -9,9 +9,13 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bek.waterreminder.data.model.managewater.WaterEntry
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
@@ -29,9 +33,16 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
   private val _weightKey = floatPreferencesKey("user_weight")
   private val _selectedCupKey = intPreferencesKey("selected_cup")
 
+  private val _selectedDate = MutableStateFlow(LocalDate.now())
+  val selectedDateFlow: StateFlow<LocalDate> = _selectedDate
+
+  fun setSelectedDate(date: LocalDate) {
+    _selectedDate.value = date
+  }
+
   init {
     viewModelScope.launch {
-      restoreStreak()
+      recalculateStreak()
       migrateExistingEntries()
     }
   }
@@ -39,33 +50,39 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
   val selectedCupFlow: Flow<Int> =
       _dataStore.data.map { preferences -> preferences[_selectedCupKey] ?: 200 }
 
-  val dailyWaterFlow: Flow<Int> =
-      _dataStore.data.map { preferences ->
-        val todayKey = getWaterKeyForToday()
-        preferences[todayKey] ?: 0
-      }
-
-  val weightFlow: Flow<Float> = _dataStore.data.map { preferences -> preferences[_weightKey] ?: 0f }
-
   val dailyGoalFlow: Flow<Int> =
       _dataStore.data.map { preferences -> preferences[_dailyGoalKey] ?: 2000 }
 
+  val weightFlow: Flow<Float> = _dataStore.data.map { preferences -> preferences[_weightKey] ?: 0f }
+
   val streakFlow: Flow<Int> = _dataStore.data.map { preferences -> preferences[_streakKey] ?: 0 }
 
-  val dailyPercentFlow =
-      combine(dailyWaterFlow, dailyGoalFlow) { water, goal ->
-        if (goal > 0) water.toFloat() / goal.toFloat() else 0f
+  @OptIn(ExperimentalCoroutinesApi::class)
+  val selectedDayWaterFlow: Flow<Int> =
+      selectedDateFlow.flatMapLatest { date ->
+        _dataStore.data.map { preferences ->
+          val key = getWaterKeyFor(date)
+          preferences[key] ?: 0
+        }
       }
 
-  val todayWaterEntriesFlow: Flow<List<WaterEntry>> =
-      _dataStore.data.map { preferences ->
-        val key = getWaterEntriesKeyForToday()
-        val json = preferences[key] ?: "[]"
-        try {
-          Json.decodeFromString<List<WaterEntry>>(json)
-        } catch (e: Exception) {
-          emptyList()
+  @OptIn(ExperimentalCoroutinesApi::class)
+  val selectedDayWaterEntriesFlow: Flow<List<WaterEntry>> =
+      selectedDateFlow.flatMapLatest { date ->
+        _dataStore.data.map { preferences ->
+          val key = getWaterEntriesKeyFor(date)
+          val json = preferences[key] ?: "[]"
+          try {
+            Json.decodeFromString<List<WaterEntry>>(json)
+          } catch (e: Exception) {
+            emptyList()
+          }
         }
+      }
+
+  val selectedDayPercentFlow: Flow<Float> =
+      selectedDayWaterFlow.combine(dailyGoalFlow) { water, goal ->
+        if (goal > 0) water.toFloat() / goal.toFloat() else 0f
       }
 
   val weeklyWaterFlow: Flow<List<Int>> =
@@ -89,21 +106,9 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
         completedDays / 7f
       }
 
-  suspend fun removeWaterEntryById(id: String) {
-    val key = getWaterEntriesKeyForToday()
-    val currentJson = _dataStore.data.first()[key] ?: "[]"
-    val currentList = Json.decodeFromString<List<WaterEntry>>(currentJson)
-
-    val entryToRemove = currentList.find { it.id == id }
-    if (entryToRemove != null) {
-      val newList = currentList.filter { it.id != id }
-      _dataStore.edit { it[key] = Json.encodeToString(newList) }
-      decreaseWater(entryToRemove.amount)
-    }
-  }
-
-  suspend fun addWaterEntryToday(amount: Int) {
-    val key = getWaterEntriesKeyForToday()
+  suspend fun addWaterEntry(amount: Int) {
+    val date = selectedDateFlow.value
+    val key = getWaterEntriesKeyFor(date)
     val currentTime = LocalTime.now()
     val formatter = DateTimeFormatter.ofPattern("hh:mma")
     val formattedTime = currentTime.format(formatter)
@@ -116,25 +121,99 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
     val newList = currentList + newEntry
 
     _dataStore.edit { it[key] = Json.encodeToString(newList) }
-    drinkWater(amount)
+
+    val waterKey = getWaterKeyFor(date)
+    val prefs = _dataStore.data.first()
+    val currentWater = prefs[waterKey] ?: 0
+    val newWater = currentWater + amount
+    _dataStore.edit { it[waterKey] = newWater }
+
+    recalculateStreak()
   }
 
-  suspend fun removeWaterEntryToday(index: Int) {
-    val key = getWaterEntriesKeyForToday()
+  suspend fun recalculateStreak() {
+    val prefs = _dataStore.data.first()
+    val dailyGoal = prefs[_dailyGoalKey] ?: 2000
+
+    var streak = 0
+    val day = LocalDate.now()
+    var startDay = day
+
+    val todayWater = prefs[getWaterKeyFor(day)] ?: 0
+    if (todayWater < dailyGoal) {
+      startDay = day.minusDays(1)
+    }
+
+    while (true) {
+      val water = prefs[getWaterKeyFor(startDay)] ?: 0
+      if (water >= dailyGoal) {
+        streak += 1
+        startDay = startDay.minusDays(1)
+      } else {
+        break
+      }
+    }
+    updateStreak(streak)
+  }
+
+  suspend fun removeWaterEntryById(id: String) {
+    val date = selectedDateFlow.value
+    val key = getWaterEntriesKeyFor(date)
     val currentJson = _dataStore.data.first()[key] ?: "[]"
     val currentList = Json.decodeFromString<List<WaterEntry>>(currentJson)
 
-    if (index in currentList.indices) {
-      val removedEntry = currentList[index]
-      val newList = currentList.toMutableList().apply { removeAt(index) }
-
+    val entryToRemove = currentList.find { it.id == id }
+    if (entryToRemove != null) {
+      val newList = currentList.filter { it.id != id }
       _dataStore.edit { it[key] = Json.encodeToString(newList) }
-      decreaseWater(removedEntry.amount)
+
+      val waterKey = getWaterKeyFor(date)
+      val prefs = _dataStore.data.first()
+      val currentWater = prefs[waterKey] ?: 0
+      val newWater = (currentWater - entryToRemove.amount).coerceAtLeast(0)
+      _dataStore.edit { it[waterKey] = newWater }
+
+      recalculateStreak()
     }
   }
 
+  private fun getDateAsInt(date: LocalDate): Int {
+    return date.year * 10000 + date.monthValue * 100 + date.dayOfMonth
+  }
+
+  fun getWaterKeyFor(date: LocalDate): Preferences.Key<Int> {
+    return intPreferencesKey("water_${getDateAsInt(date)}")
+  }
+
+  fun getWaterEntriesKeyFor(date: LocalDate): Preferences.Key<String> {
+    return stringPreferencesKey("water_entries_${getDateAsInt(date)}")
+  }
+
+  suspend fun updateWeight(weight: Float) {
+    _dataStore.edit { preferences -> preferences[_weightKey] = weight }
+  }
+
+  suspend fun updateDailyGoal(newGoal: Int) {
+    _dataStore.edit { preferences -> preferences[_dailyGoalKey] = newGoal }
+    recalculateStreak()
+  }
+
+  suspend fun updateStreak(newStreak: Int) {
+    _dataStore.edit { preferences -> preferences[_streakKey] = newStreak }
+  }
+
+  suspend fun updateSelectedCup(newCup: Int) {
+    _dataStore.edit { preferences -> preferences[_selectedCupKey] = newCup }
+  }
+
+  suspend fun updateLastCompletedDate(newDate: Int) {
+    _dataStore.edit { preferences -> preferences[_lastCompletedDateKey] = newDate }
+  }
+
+  // MIGRATION VE STREAK LOGIC
   private suspend fun migrateExistingEntries() {
-    val key = getWaterEntriesKeyForToday()
+    val date = selectedDateFlow.value
+    val key = getWaterEntriesKeyFor(date)
     val currentJson = _dataStore.data.first()[key] ?: "[]"
 
     try {
@@ -142,7 +221,6 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
       val needsMigration =
           currentList.any {
             try {
-
               it.id.isEmpty()
             } catch (e: Exception) {
               true
@@ -163,99 +241,5 @@ class ManageWaterViewModel(private val _dataStore: DataStore<Preferences>) : Vie
     } catch (e: Exception) {
       _dataStore.edit { it[key] = "[]" }
     }
-  }
-
-  private suspend fun restoreStreak() {
-    val prefs = _dataStore.data.first()
-    val dailyGoal = prefs[_dailyGoalKey] ?: 2000
-    val lastDateInt = prefs[_lastCompletedDateKey] ?: 0
-    val today = LocalDate.now()
-    val yesterday = today.minusDays(1)
-
-    val todayWater = prefs[getWaterKeyForToday()] ?: 0
-    val streak = prefs[_streakKey] ?: 0
-
-    if (lastDateInt != 0) {
-      val lastCompletedDate =
-          LocalDate.of(lastDateInt / 10000, (lastDateInt % 10000) / 100, lastDateInt % 100)
-
-      if (lastCompletedDate.isBefore(yesterday)) {
-        updateStreak(0)
-      }
-    }
-
-    val lastDateAfterReset = _dataStore.data.first()[_lastCompletedDateKey] ?: 0
-    if (todayWater >= dailyGoal && lastDateAfterReset != getTodayAsInt()) {
-      updateStreak(streak + 1)
-      updateLastCompletedDate(getTodayAsInt())
-    }
-  }
-
-  suspend fun updateDailyGoal(newGoal: Int) {
-    _dataStore.edit { preferences -> preferences[_dailyGoalKey] = newGoal }
-  }
-
-  suspend fun updateStreak(newStreak: Int) {
-    _dataStore.edit { preferences -> preferences[_streakKey] = newStreak }
-  }
-
-  suspend fun updateSelectedCup(newCup: Int) {
-    _dataStore.edit { preferences -> preferences[_selectedCupKey] = newCup }
-  }
-
-  suspend fun updateLastCompletedDate(newDate: Int) {
-    _dataStore.edit { preferences -> preferences[_lastCompletedDateKey] = newDate }
-  }
-
-  suspend fun drinkWater(amount: Int) {
-    val prefs = _dataStore.data.first()
-    val waterKey = getWaterKeyForToday()
-    val currentWater = prefs[waterKey] ?: 0
-    val dailyGoal = prefs[_dailyGoalKey] ?: 2000
-
-    val newWater = currentWater + amount
-    _dataStore.edit { preferences -> preferences[waterKey] = newWater }
-
-    val todayDateInt = getTodayAsInt()
-    val lastDate = prefs[_lastCompletedDateKey] ?: 0
-    val streak = prefs[_streakKey] ?: 0
-
-    if (newWater >= dailyGoal && lastDate != todayDateInt) {
-      updateStreak(streak + 1)
-      updateLastCompletedDate(todayDateInt)
-    }
-  }
-
-  suspend fun decreaseWater(amount: Int) {
-    val prefs = _dataStore.data.first()
-    val waterKey = getWaterKeyForToday()
-    val currentWater = prefs[waterKey] ?: 0
-    val dailyGoal = prefs[_dailyGoalKey] ?: 2000
-
-    val newWater = (currentWater - amount).coerceAtLeast(0)
-    _dataStore.edit { preferences -> preferences[waterKey] = newWater }
-
-    val todayDateInt = getTodayAsInt()
-    val lastDate = prefs[_lastCompletedDateKey] ?: 0
-    val streak = prefs[_streakKey] ?: 0
-
-    if (newWater < dailyGoal && lastDate == todayDateInt && streak > 0) {
-      updateStreak(streak - 1)
-      updateLastCompletedDate(0)
-    }
-  }
-
-  private fun getDateAsInt(date: LocalDate): Int {
-    return date.year * 10000 + date.monthValue * 100 + date.dayOfMonth
-  }
-
-  fun getTodayAsInt(): Int = getDateAsInt(LocalDate.now())
-
-  fun getWaterKeyForToday(): Preferences.Key<Int> {
-    return intPreferencesKey("water_${getTodayAsInt()}")
-  }
-
-  fun getWaterEntriesKeyForToday(): Preferences.Key<String> {
-    return stringPreferencesKey("water_entries_${getTodayAsInt()}")
   }
 }
